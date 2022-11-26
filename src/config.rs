@@ -1,3 +1,4 @@
+use crate::connection::Peer;
 use derive_getters::Getters;
 use serde::Deserialize;
 use std::fs::File;
@@ -5,16 +6,8 @@ use std::io::BufReader;
 
 #[derive(Deserialize, Getters)]
 pub(crate) struct Config {
-    peers: Vec<Peer>,
+    peers: Vec<Peer>, // TODO: these aren't really peers.
     server: Option<Server>,
-}
-
-#[derive(Debug, Clone, Deserialize, Getters)]
-pub(crate) struct Peer {
-    host: String,
-    port: usize,
-    wait_seconds: u64, // TODO: better term?
-    key: String,
 }
 
 #[derive(Clone, Deserialize, Getters)]

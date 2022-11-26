@@ -1,5 +1,5 @@
 mod config;
-mod connection;
+pub(crate) mod connection;
 
 use crate::{
     config::Config,
@@ -15,6 +15,7 @@ async fn connect_to_peers(config: &Config) {
     for peer in config.peers() {
         let mut state = NotConnected::new(peer.clone()).into_connection();
         let wait_seconds = *peer.wait_seconds();
+        let wait_duration = Duration::from_secs(wait_seconds);
         let key = peer.key().as_bytes().to_vec();
         tokio::spawn(async move {
             loop {
@@ -22,8 +23,9 @@ async fn connect_to_peers(config: &Config) {
                     Connection::NotConnected(nc) => nc.connect(&key),
                     Connection::Connected(c) => c.ping(),
                 };
-                // TODO: better way of handling this.
-                tokio::time::sleep(Duration::from_secs(wait_seconds)).await;
+                log::trace!("Waiting {wait_seconds}s");
+                tokio::time::sleep(wait_duration).await;
+                log::trace!("Done waiting {wait_seconds}s");
             }
         });
     }
@@ -39,6 +41,7 @@ async fn check_key(key: Vec<u8>, socket: &mut TcpStream, addr: SocketAddr) -> Re
                 log::error!("{addr:?} did not send the correct key");
                 Err(())
             } else {
+                log::trace!("Recieved the correct key from {addr:?}");
                 Ok(())
             }
         }
