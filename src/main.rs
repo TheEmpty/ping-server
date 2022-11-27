@@ -32,21 +32,21 @@ async fn connect_to_peers(config: &Config) {
 }
 
 async fn check_key(key: Vec<u8>, socket: &mut TcpStream, addr: SocketAddr) -> Result<(), ()> {
-    log::trace!("Waiting for key from {addr:?}");
+    log::trace!("[{addr:?}] Waiting for key.");
     let mut sent_key = vec![0; key.len()];
 
     match socket.read_exact(&mut sent_key) {
         Ok(_) => {
             if sent_key != key {
-                log::error!("{addr:?} did not send the correct key");
+                log::error!("[{addr:?}] Did not send the correct key.");
                 Err(())
             } else {
-                log::trace!("Recieved the correct key from {addr:?}");
+                log::trace!("[{addr:?}] Recieved the correct key.");
                 Ok(())
             }
         }
         Err(e) => {
-            log::error!("{addr:?}: key check: {e}");
+            log::error!("[{addr:?}] key check: {e}");
             Err(())
         }
     }
@@ -56,16 +56,16 @@ async fn listen(mut socket: TcpStream, addr: SocketAddr) {
     tokio::spawn(async move {
         let mut buff = vec![0; 4];
         loop {
-            log::trace!("Waiting for {} bytes from {addr:?}", buff.len());
+            log::trace!("[{addr:?}] Waiting for {} bytes.", buff.len());
             match socket.read_exact(&mut buff) {
                 Ok(_) => {
                     if buff != PING_BYTES {
-                        log::error!("{addr:?} did not send 'PING'. Got {buff:?}");
+                        log::error!("[{addr:?}] did not send 'PING'. Got {buff:?}");
                         break;
                     }
                 }
                 Err(e) => {
-                    log::error!("{addr:?}: ping failed: {e}");
+                    log::error!("[{addr:?}] ping failed: {e}");
                     break;
                 }
             }
@@ -80,6 +80,7 @@ async fn server(config: &Config) {
         let key = server.key().as_bytes();
         let read_timeout = server.read_timeout();
         loop {
+            // TODO: some form of rate limiting on accepts
             match listener.accept() {
                 Ok((mut socket, addr)) => {
                     let _ = socket.set_read_timeout(Some(Duration::from_secs(*read_timeout)));
