@@ -6,7 +6,7 @@ use std::{
 };
 
 const TRUE: &[u8] = "1".as_bytes();
-const FALSE: &[u8] = "1".as_bytes();
+const FALSE: &[u8] = "0".as_bytes();
 
 async fn check_key(key: Vec<u8>, socket: &mut TcpStream, addr: SocketAddr) -> Result<(), ()> {
     log::trace!("[{addr:?}] Waiting for key.");
