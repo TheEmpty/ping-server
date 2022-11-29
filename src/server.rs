@@ -60,13 +60,15 @@ async fn get_name(socket: &mut TcpStream) -> Result<String, NameError> {
 
 async fn listen(mut socket: TcpStream, addr: SocketAddr) {
     tokio::spawn(async move {
-        let mut buff = vec![0; 4];
+        let mut buff = vec![0; PING_BYTES.len()];
         loop {
             log::trace!("[{addr:?}] Waiting for {} bytes.", buff.len());
             match socket.read_exact(&mut buff) {
                 Ok(_) => {
                     if buff != PING_BYTES {
-                        log::error!("[{addr:?}] did not send 'PING'. Got {buff:?}");
+                        log::error!(
+                            "[{addr:?}] did not send ping bytes, {PING_BYTES:?}. Got {buff:?}"
+                        );
                         break;
                     }
                 }
