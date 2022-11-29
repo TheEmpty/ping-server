@@ -3,13 +3,13 @@
         "host": "0.0.0.0",
         "port": 9999,
         "key": "some_generated_key",
-        "read_timeout": 30
+        "read_timeout": 30,
+        "wait_seconds": 10
     },
     "peers": [
         {
             "host": "localhost",
             "port": 9999,
-            "wait_seconds": 10,
             "key": "some_generated_key",
             "name": "local"
         }

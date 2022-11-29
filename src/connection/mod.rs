@@ -11,3 +11,12 @@ pub(crate) enum Connection {
     NotConnected(NotConnected),
     Connected(Connected),
 }
+
+impl Connection {
+    pub(crate) fn peer(&self) -> &Peer {
+        match self {
+            Connection::NotConnected(nc) => &nc.peer,
+            Connection::Connected(c) => &c.peer,
+        }
+    }
+}

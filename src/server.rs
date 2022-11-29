@@ -82,6 +82,7 @@ pub(crate) async fn start(config: &Config) {
                     let _ = socket.set_read_timeout(Some(Duration::from_secs(*read_timeout)));
                     if check_key(key.to_vec(), &mut socket, addr).await.is_ok() {
                         let _name = get_name(&mut socket).await;
+                        let _ = socket.write(&[*server.wait_seconds()]);
                         listen(socket, addr).await;
                     }
                 }

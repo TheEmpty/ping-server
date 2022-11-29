@@ -16,6 +16,7 @@ pub(crate) struct Server {
     port: usize,
     key: String,
     read_timeout: u64,
+    wait_seconds: u8,
 }
 
 fn get_config_path() -> String {

@@ -5,9 +5,14 @@ use serde::Deserialize;
 pub(crate) struct Peer {
     host: String,
     port: usize,
-    wait_seconds: u64,
+    #[serde(skip_deserializing, default = "thirty")]
+    pub(super) wait_seconds: u8,
     key: String,
     name: String,
+}
+
+fn thirty() -> u8 {
+    30
 }
 
 impl Peer {

@@ -16,8 +16,6 @@ fn read_bool(stream: &mut TcpStream) -> Result<bool, io::Error> {
     Ok(buff == "1".as_bytes())
 }
 
-// TODO: read wait_time from server
-#[allow(dead_code)]
 fn read_u8(stream: &mut TcpStream) -> Result<u8, io::Error> {
     let mut buff = [0];
     stream.read_exact(&mut buff)?;
@@ -50,16 +48,25 @@ impl NotConnected {
         let _ = stream.write(&name);
     }
 
-    pub(crate) fn connect(self, key: &[u8]) -> Connection {
+    pub(crate) fn connect(mut self, key: &[u8]) -> Connection {
         match TcpStream::connect(self.peer.to_uri()) {
             Ok(mut stream) => match self.send_key(&mut stream, key) {
                 Ok(true) => {
                     self.send_name(&mut stream);
-                    Connected {
-                        peer: self.peer,
-                        stream,
+                    match read_u8(&mut stream) {
+                        Ok(wait_seconds) => {
+                            self.peer.wait_seconds = wait_seconds;
+                            Connected {
+                                peer: self.peer,
+                                stream,
+                            }
+                            .into_connection()
+                        }
+                        Err(e) => {
+                            log::error!("Failed to read wait_seconds: {e}");
+                            self.into_connection()
+                        }
                     }
-                    .into_connection()
                 }
                 Ok(false) => {
                     log::trace!("Key is incorrect");
