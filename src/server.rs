@@ -16,16 +16,26 @@ async fn check_key(key: Vec<u8>, socket: &mut TcpStream, addr: SocketAddr) -> Re
         Ok(_) => {
             if sent_key != key {
                 log::error!("[{addr:?}] Did not send the correct key.");
+                // we do not care if the result got through since we will drop connection.
+                // this is just to let client log it.
                 let _ = socket.write(FALSE);
                 Err(())
             } else {
                 log::trace!("[{addr:?}] Recieved the correct key.");
-                let _ = socket.write(TRUE).expect("Failed to send key acceptance");
-                Ok(())
+                //
+                match socket.write(TRUE) {
+                    Ok(_) => Ok(()),
+                    Err(e) => {
+                        log::error!("[{addr:?}] Failed to send TRUE after getting key. {e}");
+                        Err(())
+                    }
+                }
             }
         }
         Err(e) => {
             log::error!("[{addr:?}] key check: {e}");
+            // we do not care if the result got through since we will drop connection.
+            // this is just to let client log it.
             let _ = socket.write(FALSE);
             Err(())
         }
@@ -78,11 +88,17 @@ pub(crate) async fn start(config: &Config) {
         loop {
             match listener.accept() {
                 Ok((mut socket, addr)) => {
-                    let _ = socket.set_read_timeout(Some(Duration::from_secs(*read_timeout)));
+                    if let Err(e) =
+                        socket.set_read_timeout(Some(Duration::from_secs(*read_timeout)))
+                    {
+                        log::warn!("[{addr:?}] Failed to set read timeout: {e}");
+                    }
                     if check_key(key.to_vec(), &mut socket, addr).await.is_ok() {
                         let _name = get_name(&mut socket).await;
-                        let _ = socket.write(&[*server.wait_seconds()]);
-                        listen(socket, addr).await;
+                        match socket.write(&[*server.wait_seconds()]) {
+                            Ok(_) => listen(socket, addr).await,
+                            Err(e) => log::warn!("[{addr:?}] Could not send wait_seconds. {e}"),
+                        }
                     }
                 }
                 Err(e) => log::error!("Couldn't connect to client: {e:?}"),

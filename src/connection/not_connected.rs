@@ -33,11 +33,11 @@ impl NotConnected {
 
     fn send_key(&self, stream: &mut TcpStream, key: &[u8]) -> Result<bool, io::Error> {
         log::trace!("Connecting to peer {}, sending key.", self.peer.to_uri());
-        let _ = stream.write(key);
+        let _ = stream.write(key)?;
         read_bool(stream)
     }
 
-    fn send_name(&self, stream: &mut TcpStream) {
+    fn send_name(&self, stream: &mut TcpStream) -> Result<(), io::Error> {
         log::trace!(
             "Connecting to peer {}, sending name {}.",
             self.peer.to_uri(),
@@ -45,29 +45,30 @@ impl NotConnected {
         );
         let mut name = self.peer.name().as_bytes().to_vec();
         name.resize(100, 0);
-        let _ = stream.write(&name);
+        let _ = stream.write(&name)?;
+        Ok(())
     }
 
     pub(crate) fn connect(mut self, key: &[u8]) -> Connection {
         match TcpStream::connect(self.peer.to_uri()) {
             Ok(mut stream) => match self.send_key(&mut stream, key) {
-                Ok(true) => {
-                    self.send_name(&mut stream);
-                    match read_u8(&mut stream) {
-                        Ok(wait_seconds) => {
-                            self.peer.wait_seconds = wait_seconds;
-                            Connected {
-                                peer: self.peer,
-                                stream,
-                            }
-                            .into_connection()
+                Ok(true) => match self
+                    .send_name(&mut stream)
+                    .and_then(|_| read_u8(&mut stream))
+                {
+                    Ok(wait_seconds) => {
+                        self.peer.wait_seconds = wait_seconds;
+                        Connected {
+                            peer: self.peer,
+                            stream,
                         }
-                        Err(e) => {
-                            log::error!("Failed to read wait_seconds: {e}");
-                            self.into_connection()
-                        }
+                        .into_connection()
                     }
-                }
+                    Err(e) => {
+                        log::error!("Failed to read wait_seconds: {e}");
+                        self.into_connection()
+                    }
+                },
                 Ok(false) => {
                     log::trace!("Key is incorrect");
                     self.into_connection()
