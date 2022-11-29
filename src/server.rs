@@ -105,9 +105,9 @@ pub(crate) async fn start(config: &Config) {
                 }
                 Err(e) => log::error!("Couldn't connect to client: {e:?}"),
             }
-            // Allow one new connection, success or failure, ever 30s.
+            // Allow one new connection, success or failure, every duration
             // Verrryy rudimentary prevention of attacks.
-            tokio::time::sleep(Duration::from_secs(30)).await;
+            tokio::time::sleep(Duration::from_secs(1)).await;
         }
     }
 }
