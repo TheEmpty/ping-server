@@ -2,7 +2,7 @@ use super::{Connection, NotConnected, Peer};
 use std::io::Write;
 use std::net::TcpStream;
 
-pub(crate) const PING_BYTES: &[u8] = "PING".as_bytes();
+pub(crate) const PING_BYTES: &[u8] = "P".as_bytes();
 
 #[derive(Debug)]
 pub(crate) struct Connected {
