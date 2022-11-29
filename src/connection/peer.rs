@@ -7,6 +7,7 @@ pub(crate) struct Peer {
     port: usize,
     wait_seconds: u64,
     key: String,
+    name: String,
 }
 
 impl Peer {

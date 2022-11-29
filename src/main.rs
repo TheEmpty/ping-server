@@ -11,6 +11,9 @@ async fn main() {
     env_logger::init();
     let config = Config::load_from_arg();
 
+    // TODO:
+    // share mutex with peers - so web metrics can update
+
     client::connect_to_peers(&config).await;
     server::start(&config).await;
 

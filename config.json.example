@@ -10,7 +10,8 @@
             "host": "localhost",
             "port": 9999,
             "wait_seconds": 10,
-            "key": "some_generated_key"
+            "key": "some_generated_key",
+            "name": "local"
         }
     ]
 }
