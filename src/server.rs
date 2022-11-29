@@ -76,7 +76,6 @@ pub(crate) async fn start(config: &Config) {
         let key = server.key().as_bytes();
         let read_timeout = server.read_timeout();
         loop {
-            // TODO: some form of rate limiting on accepts
             match listener.accept() {
                 Ok((mut socket, addr)) => {
                     let _ = socket.set_read_timeout(Some(Duration::from_secs(*read_timeout)));
@@ -88,6 +87,9 @@ pub(crate) async fn start(config: &Config) {
                 }
                 Err(e) => log::error!("Couldn't connect to client: {e:?}"),
             }
+            // Allow one new connection, success or failure, ever 30s.
+            // Verrryy rudimentary prevention of attacks.
+            tokio::time::sleep(Duration::from_secs(30)).await;
         }
     }
 }
