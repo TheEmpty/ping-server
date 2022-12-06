@@ -1,21 +1,22 @@
 mod client;
 mod config;
-pub(crate) mod connection;
 mod server;
 
 use crate::config::Config;
+use std::collections::HashMap;
+use std::sync::Arc;
 use std::time::Duration;
+use tokio::sync::Mutex;
 
 #[tokio::main]
 async fn main() {
     env_logger::init();
     let config = Config::load_from_arg();
+    let clients = Arc::new(Mutex::new(HashMap::new()));
 
-    // TODO:
-    // share mutex with peers - so web metrics can update
-
-    client::connect_to_peers(&config).await;
-    server::start(&config).await;
+    client::connect_to_server(&config).await;
+    server::start(&config, clients.clone()).await;
+    // TODO: web server / Rocket for metrics using clients
 
     if config.server().is_none() {
         loop {

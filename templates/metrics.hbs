@@ -1,13 +1,6 @@
-# Probably want a way for peers to give themselves
-# a name since IP may change.
-
 {{#each client}}
-# HELP {{name}}_last_seen seconds since {{name}} sent a ping
-# TYPE {{name}}_last_seen gauge
-{{name}}_last_seen {{last_seen}}
-
-# HELP {{name}}_connections number of connections {{name}} is using to send pings
-# TYPE {{name}}_connections gauge
-{{name}}_connections {{connections}}
+# HELP {{name}}_last_seen_seconds seconds since {{name}} sent a ping
+# TYPE {{name}}_last_seen_seconds gauge
+{{name}}_last_seen_seconds {{last_seen}}
 
 {{/each}}

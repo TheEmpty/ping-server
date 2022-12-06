@@ -1,10 +1,30 @@
-use crate::{
-    config::Config,
-    connection::{Connection, NotConnected},
-};
+mod connected;
+mod not_connected;
+mod peer;
+
+pub(crate) use connected::{Connected, PING_BYTES};
+pub(crate) use not_connected::NotConnected;
+pub(crate) use peer::Peer;
+
+use crate::config::Config;
 use std::time::Duration;
 
-pub(crate) async fn connect_to_peers(config: &Config) {
+#[derive(Debug)]
+pub(crate) enum Connection {
+    NotConnected(NotConnected),
+    Connected(Connected),
+}
+
+impl Connection {
+    pub(crate) fn peer(&self) -> &Peer {
+        match self {
+            Connection::NotConnected(nc) => &nc.peer,
+            Connection::Connected(c) => &c.peer,
+        }
+    }
+}
+
+pub(crate) async fn connect_to_server(config: &Config) {
     for peer in config.peers() {
         let mut state = NotConnected::new(peer.clone()).into_connection();
         let key = peer.key().as_bytes().to_vec();

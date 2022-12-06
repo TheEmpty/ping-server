@@ -1,9 +1,12 @@
-use crate::{config::Config, connection::PING_BYTES};
+use crate::{client::PING_BYTES, config::Config};
 use std::{
+    collections::HashMap,
     io::{Read, Write},
     net::{SocketAddr, TcpListener, TcpStream},
-    time::Duration,
+    sync::Arc,
+    time::{Duration, SystemTime},
 };
+use tokio::sync::Mutex;
 
 const TRUE: &[u8] = "1".as_bytes();
 const FALSE: &[u8] = "0".as_bytes();
@@ -42,6 +45,7 @@ async fn check_key(key: Vec<u8>, socket: &mut TcpStream, addr: SocketAddr) -> Re
     }
 }
 
+#[derive(Debug)]
 enum NameError {
     Io(std::io::Error),
     NoNull,
@@ -58,7 +62,12 @@ async fn get_name(socket: &mut TcpStream) -> Result<String, NameError> {
     String::from_utf8(buff[0..first_null].to_vec()).map_err(NameError::Utf8)
 }
 
-async fn listen(mut socket: TcpStream, addr: SocketAddr) {
+async fn listen(
+    name: String,
+    mut socket: TcpStream,
+    addr: SocketAddr,
+    clients: Arc<Mutex<HashMap<String, SystemTime>>>,
+) {
     tokio::spawn(async move {
         let mut buff = vec![0; PING_BYTES.len()];
         loop {
@@ -70,6 +79,10 @@ async fn listen(mut socket: TcpStream, addr: SocketAddr) {
                             "[{addr:?}] did not send ping bytes, {PING_BYTES:?}. Got {buff:?}"
                         );
                         break;
+                    } else {
+                        let mut lock = clients.lock().await;
+                        lock.insert(name.clone(), SystemTime::now());
+                        drop(lock);
                     }
                 }
                 Err(e) => {
@@ -81,7 +94,7 @@ async fn listen(mut socket: TcpStream, addr: SocketAddr) {
     });
 }
 
-pub(crate) async fn start(config: &Config) {
+pub(crate) async fn start(config: &Config, clients: Arc<Mutex<HashMap<String, SystemTime>>>) {
     if let Some(server) = config.server() {
         let host_uri = format!("{}:{}", server.host(), server.port());
         let listener = TcpListener::bind(host_uri).expect("BIND FAILED");
@@ -96,9 +109,15 @@ pub(crate) async fn start(config: &Config) {
                         log::warn!("[{addr:?}] Failed to set read timeout: {e}");
                     }
                     if check_key(key.to_vec(), &mut socket, addr).await.is_ok() {
-                        let _name = get_name(&mut socket).await;
+                        let name = match get_name(&mut socket).await {
+                            Ok(n) => n,
+                            Err(e) => {
+                                log::warn!("[{addr:?}] Was unable to get name. {e:?}");
+                                break;
+                            }
+                        };
                         match socket.write(&[*server.wait_seconds()]) {
-                            Ok(_) => listen(socket, addr).await,
+                            Ok(_) => listen(name, socket, addr, clients.clone()).await,
                             Err(e) => log::warn!("[{addr:?}] Could not send wait_seconds. {e}"),
                         }
                     }

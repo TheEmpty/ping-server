@@ -1,4 +1,4 @@
-use crate::connection::Peer;
+use crate::client::Peer;
 use derive_getters::Getters;
 use serde::Deserialize;
 use std::fs::File;
@@ -15,7 +15,7 @@ pub(crate) struct Server {
     host: String,
     port: usize,
     key: String,
-    read_timeout: u64,
+    read_timeout: u64, // socket.set_read_timeout takes u64
     wait_seconds: u8,
 }
 
@@ -35,7 +35,8 @@ fn get_config_path() -> String {
 impl Config {
     pub(crate) fn load_from_arg() -> Self {
         let file_path = get_config_path();
-        let config_file = File::open(file_path).expect("Could not find {file_path}");
+        let msg = format!("Could not find {file_path}");
+        let config_file = File::open(file_path).expect(&msg);
         let config_reader = BufReader::new(config_file);
         serde_json::from_reader(config_reader).expect("Error reading configuration.")
     }
