@@ -18,7 +18,7 @@ async fn metrics(clients: &State<Arc<LastSeenMap>>) -> Template {
         .iter()
         .map(|(name, last_seen_utc)| {
             HashMap::from([
-                ("name", sanitize_client_name(&name)),
+                ("name", sanitize_client_name(name)),
                 (
                     "last_seen",
                     Utc::now()
@@ -51,7 +51,7 @@ pub(crate) async fn launch(clients: Arc<LastSeenMap>) {
     tokio::spawn(rocket);
 }
 
-fn sanitize_client_name(name: &String) -> String {
+fn sanitize_client_name(name: &str) -> String {
     let name = name.to_lowercase();
     let mut name = NON_VALID_PROMETHEUS_CHARACTERS
         .replace_all(&name, "_")
