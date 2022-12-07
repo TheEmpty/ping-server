@@ -1,15 +1,18 @@
 use crate::{client::PING_BYTES, config::Config};
+use chrono::{offset::Utc, DateTime};
 use std::{
     collections::HashMap,
     io::{Read, Write},
     net::{SocketAddr, TcpListener, TcpStream},
     sync::Arc,
-    time::{Duration, SystemTime},
+    time::Duration,
 };
 use tokio::sync::Mutex;
 
 const TRUE: &[u8] = "1".as_bytes();
 const FALSE: &[u8] = "0".as_bytes();
+
+pub(crate) type LastSeenMap = Mutex<HashMap<String, DateTime<Utc>>>;
 
 async fn check_key(key: Vec<u8>, socket: &mut TcpStream, addr: SocketAddr) -> Result<(), ()> {
     log::trace!("[{addr:?}] Waiting for key.");
@@ -62,12 +65,7 @@ async fn get_name(socket: &mut TcpStream) -> Result<String, NameError> {
     String::from_utf8(buff[0..first_null].to_vec()).map_err(NameError::Utf8)
 }
 
-async fn listen(
-    name: String,
-    mut socket: TcpStream,
-    addr: SocketAddr,
-    clients: Arc<Mutex<HashMap<String, SystemTime>>>,
-) {
+async fn listen(name: String, mut socket: TcpStream, addr: SocketAddr, clients: Arc<LastSeenMap>) {
     tokio::spawn(async move {
         let mut buff = vec![0; PING_BYTES.len()];
         loop {
@@ -81,7 +79,7 @@ async fn listen(
                         break;
                     } else {
                         let mut lock = clients.lock().await;
-                        lock.insert(name.clone(), SystemTime::now());
+                        lock.insert(name.clone(), Utc::now());
                         drop(lock);
                     }
                 }
@@ -94,8 +92,10 @@ async fn listen(
     });
 }
 
-pub(crate) async fn start(config: &Config, clients: Arc<Mutex<HashMap<String, SystemTime>>>) {
+pub(crate) async fn start(config: &Config) {
     if let Some(server) = config.server() {
+        let clients = Arc::new(Mutex::new(HashMap::new()));
+        tokio::spawn(crate::web_server::launch(clients.clone()));
         let host_uri = format!("{}:{}", server.host(), server.port());
         let listener = TcpListener::bind(host_uri).expect("BIND FAILED");
         let key = server.key().as_bytes();
