@@ -57,6 +57,7 @@ impl NotConnected {
                     .and_then(|_| read_u8(&mut stream))
                 {
                     Ok(wait_seconds) => {
+                        log::trace!("Got wait_seconds = {wait_seconds} from server");
                         self.peer.wait_seconds = wait_seconds;
                         Connected {
                             peer: self.peer,
