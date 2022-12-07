@@ -6,7 +6,7 @@ use std::io::BufReader;
 
 #[derive(Deserialize, Getters)]
 pub(crate) struct Config {
-    peers: Vec<Peer>, // TODO: these aren't really peers.
+    peers: Option<Vec<Peer>>, // TODO: these aren't really peers.
     server: Option<Server>,
 }
 
