@@ -1,8 +1,15 @@
 use crate::server::LastSeenMap;
 use chrono::Utc;
+use lazy_static::lazy_static;
+use regex::Regex;
 use rocket::State;
 use rocket_dyn_templates::{context, Template};
 use std::{collections::HashMap, sync::Arc};
+
+lazy_static! {
+    /// https://prometheus.io/docs/concepts/data_model/#metric-names-and-labels
+    static ref NON_VALID_PROMETHEUS_CHARACTERS: Regex = Regex::new(r"[^a-zA-Z0-9_:]").unwrap();
+}
 
 #[get("/metrics")]
 async fn metrics(clients: &State<Arc<LastSeenMap>>) -> Template {
@@ -11,7 +18,7 @@ async fn metrics(clients: &State<Arc<LastSeenMap>>) -> Template {
         .iter()
         .map(|(name, last_seen_utc)| {
             HashMap::from([
-                ("name", name.clone()),
+                ("name", sanitize_client_name(&name)),
                 (
                     "last_seen",
                     Utc::now()
@@ -42,4 +49,18 @@ pub(crate) async fn launch(clients: Arc<LastSeenMap>) {
         .expect("Failed to ignite")
         .launch();
     tokio::spawn(rocket);
+}
+
+fn sanitize_client_name(name: &String) -> String {
+    let name = name.to_lowercase();
+    let mut name = NON_VALID_PROMETHEUS_CHARACTERS
+        .replace_all(&name, "_")
+        .to_string();
+    match name.as_bytes()[0] as char {
+        '0'..='9' => {
+            let num = name.remove(0);
+            format!("{name}_{num}")
+        }
+        _ => name,
+    }
 }
