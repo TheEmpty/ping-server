@@ -1,8 +1,8 @@
 FROM rust:alpine
 
 # Packages
-ENV BUILD_PACKAGES "pkgconfig"
-ENV DEP_PACKAGES "gcc openssl-dev musl-dev"
+ENV BUILD_PACKAGES "pkgconfig gcc"
+ENV DEP_PACKAGES "openssl-dev musl-dev"
 RUN apk add --no-cache ${BUILD_PACKAGES} ${DEP_PACKAGES}
 
 # Code
